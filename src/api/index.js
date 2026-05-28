@@ -127,7 +127,23 @@ export function setCookie(cookie) {
   c = c.replace(/;;+/g, ";");
   c = c.replace(/  +/g, " ");
   c = c.trim();
-  uni.setStorageSync(COOKIE_KEY, c);
+  uni.setStorageSync(COOKIE_KEY, c)
+
+/**
+ * 验证 Cookie 是否有效
+ */
+export async function validateCookie(cookie) {
+  const ck = cookie || getCookie()
+  if (!ck) return { valid: false, status: '未配置', message: '请先配置Cookie' }
+  try {
+    const res = await apiGet('/order/list.do', { pageNo: 1, pageSize: 1 }, ck)
+    if (res.code === 1) return { valid: true, status: '有效', message: 'Cookie有效' }
+    return { valid: false, status: '异常', message: '验证异常: code=' + (res.code || '?') }
+  } catch (e) {
+    return { valid: false, status: '网络错误', message: e.message || '请求失败' }
+  }
+}
+;
 }
 // ===== 规格相关 =====
 
