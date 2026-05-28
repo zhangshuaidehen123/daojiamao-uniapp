@@ -40,7 +40,7 @@
 </template>
 
 <script>
-import { getOrderCashInfo, cashPayOrder, getCookie, getCrmHeaders } from '@/api/index.js'
+import { getOrderCashInfo, cashPayOrder, getCookie } from '@/api/index.js'
 
 export default {
   data() {
