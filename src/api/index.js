@@ -118,16 +118,16 @@ export function getCookieRaw() {
 }
 
 export function setCookie(cookie) {
-  var cleaned = cookie;
-  cleaned = cleaned.split("").join("");
-  cleaned = cleaned.split("
-").join("");
-  cleaned = cleaned.split("	").join("");
-  cleaned = cleaned.replace(/; +/g, "; ");
-  cleaned = cleaned.replace(/;;+/g, ";");
-  cleaned = cleaned.replace(/  +/g, " ");
-  cleaned = cleaned.trim();
-  uni.setStorageSync(COOKIE_KEY, cleaned);
+  // Deep clean: remove newlines, carriage returns, tabs from cookie string
+  var c = cookie;
+  c = c.split("\r").join("");
+  c = c.split("\n").join("");
+  c = c.split("\t").join("");
+  c = c.replace(/; +/g, "; ");
+  c = c.replace(/;;+/g, ";");
+  c = c.replace(/  +/g, " ");
+  c = c.trim();
+  uni.setStorageSync(COOKIE_KEY, c);
 }
 // ===== 规格相关 =====
 
