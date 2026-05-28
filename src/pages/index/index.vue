@@ -5,7 +5,7 @@
       <view class="status-header">
         <view class="status-indicator">
           <view :class="['dot', { active: hasCookie }]"></view>
-          <text class="status-text">{{ hasCookie ? '已配置Cookie' : '演示模式' }}</text>
+          <text class="status-text">{{ hasCookie ? 'Cookie已配置' : '未配置Cookie' }}</text>
         </view>
         <view class="version-tag">v2.5.0</view>
       </view>
@@ -102,7 +102,29 @@ function loadStats() {
 }
 
 function navigate(url) {
-  uni.navigateTo({ url }).catch(() => uni.switchTab({ url }))
+  // TabBar 页面用 switchTab，子页面用 navigateTo
+  const tabPages = ['pages/index/index', 'pages/orders/orders', 'pages/logs/logs', 'pages/settings/settings']
+  const isTab = tabPages.some(t => url.includes(t))
+  if (isTab) {
+    uni.switchTab({ url })
+  } else {
+    // 检查是否有 Cookie
+    if (!getCookie()) {
+      uni.showModal({
+        title: '未配置Cookie',
+        content: '请先去"设置"页面配置有效的Cookie，否则无法下单。',
+        confirmText: '去设置',
+        cancelText: '取消',
+        success: (res) => {
+          if (res.confirm) uni.switchTab({ url: 'pages/settings/settings' })
+        }
+      })
+      return
+    }
+    uni.navigateTo({ url }).catch(err => {
+      uni.showToast({ title: '页面跳转失败', icon: 'none' })
+    })
+  }
 }
 
 function formatTime(iso) {
