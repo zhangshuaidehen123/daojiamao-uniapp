@@ -1,94 +1,45 @@
-name: Build Android APK
+name: Build App Resources
 
 on:
   push:
     branches: [ main, master ]
-    tags: [ 'v*' ]
   workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-      
-      - name: Setup Node.js
+
+      - name: Setup Node.js 18
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-      
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-      
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-      
-      - name: Install HBuilderX CLI
-        run: |
-          npm install -g @dcloudio/hbx-cli || true
-      
+
       - name: Install dependencies
-        working-directory: .
-        run: |
-          npm install || true
-      
-      # 方案1：使用 uni-app 官方 CLI 打包
-      - name: Build with uni-app CLI
-        working-directory: .
-        run: |
-          # 安装 uni-app CLI
-          npm install -g @dcloudio/uni-app || npm install -D @dcloudio/uni-app
-          
-          # 生成 Android 原生工程
-          npx uni-app-cli build --platform app-android || true
-        continue-on-error: true
-      
-      # 方案2：使用 HBuilderX offline 打包
-      - name: Download HBuilderX CLI
-        run: |
-          # 下载最新 HBuilderX 命令行工具
-          curl -L "https://update.dcloud.net.cn/hbuilderx/release/latest/HBuilderX.linux.cli.tar.gz" \
-            -o hbx.tar.gz || echo "Download failed, will use alternative"
-          tar -xzf hbx.tar.gz -C /opt/ || true
-          ls /opt/ || true
-        continue-on-error: true
-      
-      # 方案3：直接构建 Cordova/Android 项目
-      - name: Build Android APK directly
-        run: |
-          # 如果有 android/ 目录就直接 Gradle 构建
-          if [ -d "android" ]; then
-            cd android
-            chmod +x gradlew
-            ./gradlew assembleRelease
-          else
-            echo "No android directory found, APK build requires HBuilderX"
-            echo "Please use HBuilderX to build the APK locally"
-          fi
-        continue-on-error: true
-      
-      - name: Upload APK artifact
+        run: npm ci
+
+      - name: Build app-plus resources
+        run: npx uni build -p app
+
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: daojiamao-v${{ github.run_number }}.apk
-          path: |
-            **/app-release*.apk
-            **/outputs/apk/**/*.apk
-            android/app/build/outputs/apk/**/*.apk
-          if-no-files-found: warn
-      
-      - name: Create Release
+          name: app-resources-${{ github.run_number }}
+          path: dist/build/app/
+          if-no-files-found: error
+
+      - name: Create Release (tags only)
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
-            **/app-release*.apk
+            dist/build/app/**/*
           fail_on_unmatched_files: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
