@@ -24,8 +24,13 @@ jobs:
       - name: Install Node dependencies
         run: npm install
 
-      - name: Build UniApp H5 resources
-        run: npx uni build -p h5
+      - name: Build UniApp H5
+        run: npx uni build
+
+      - name: List build output
+        run: |
+          echo "=== dist structure ==="
+          find dist -type f | head -50
 
       - name: Setup JDK 17
         uses: actions/setup-java@v4
@@ -44,14 +49,21 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses 2>/dev/null || true
 
-      - name: Copy H5 resources to Android assets
+      - name: Copy H5 to Android assets
         run: |
           mkdir -p android/app/src/main/assets/www
-          cp -r dist/build/h5/* android/app/src/main/assets/www/
-          echo "=== Assets contents ==="
+          if [ -d "dist/build/h5" ]; then
+            cp -r dist/build/h5/* android/app/src/main/assets/www/
+          elif [ -d "dist/build/app" ]; then
+            cp -r dist/build/app/* android/app/src/main/assets/www/
+          else
+            echo "ERROR: No build output found"
+            find dist -type f
+            exit 1
+          fi
+          echo "=== Assets ==="
           find android/app/src/main/assets/www -type f | head -30
-          echo "=== index.html check ==="
-          test -f android/app/src/main/assets/www/index.html && echo "EXISTS" || echo "MISSING"
+          test -f android/app/src/main/assets/www/index.html && echo "index.html: EXISTS" || echo "index.html: MISSING"
 
       - name: Generate app icons
         run: |
