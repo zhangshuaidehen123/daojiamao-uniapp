@@ -143,8 +143,7 @@ export async function validateCookie(cookie) {
     return { valid: false, status: '网络错误', message: e.message || '请求失败' }
   }
 }
-;
-}
+
 // ===== 规格相关 =====
 
 /**
