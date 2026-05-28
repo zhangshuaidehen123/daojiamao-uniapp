@@ -50,10 +50,9 @@ jobs:
         run: |
           # Download latest apktool (2.10.0) from GitHub
           wget -q https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar -O /usr/local/bin/apktool.jar
-          cat > /usr/local/bin/apktool <<'WRAP'
-#!/bin/bash
+          printf '#!/bin/bash
 exec java -jar /usr/local/bin/apktool.jar "$@"
-WRAP
+' > /usr/local/bin/apktool
           chmod +x /usr/local/bin/apktool
           sudo apt-get update -qq
           sudo apt-get install -y -qq zipalign
