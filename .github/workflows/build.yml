@@ -33,11 +33,29 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=4096
 
+      - name: Verify build output
+        run: |
+          echo "=== dist/build/app structure ==="
+          find dist/build/app -type f | head -30
+          echo "=== Total files ==="
+          find dist/build/app -type f | wc -l
+
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+
+      - name: Install apktool and android tools
+        run: |
+          # Install apktool via apt
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq apktool zipalign
+
+          # Install apksigner from Android SDK
+          ANDROID_BUILD_TOOLS=$(ls -d ${ANDROID_HOME}/build-tools/*/ | tail -1)
+          echo "ANDROID_BUILD_TOOLS=$ANDROID_BUILD_TOOLS"
+          ls "$ANDROID_BUILD_TOOLS"
 
       - name: Download base APK
         run: |
@@ -45,22 +63,16 @@ jobs:
             "https://github.com/zhangshuaidehen123/daojiamao-uniapp/releases/download/base-apk-v2.4.0/base-app.apk"
           ls -lh base-app.apk
 
-      - name: Install apktool
-        run: |
-          wget -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O /usr/local/bin/apktool
-          wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar -O /usr/local/bin/apktool.jar
-          chmod +x /usr/local/bin/apktool
-
       - name: Decode base APK
         run: |
           apktool d base-app.apk -o decoded -f
-          echo "=== Decoded structure ==="
+          echo "=== Decoded assets structure ==="
           find decoded/assets/apps -type d | head -10
+          echo "=== Original www files ==="
+          find decoded/assets/apps -type f | head -20
 
       - name: Replace UniApp www resources
         run: |
-          # UniApp build output is in dist/build/app/
-          # The original APK stores app resources at assets/apps/__UNI__2050351/www/
           WWW_DIR="decoded/assets/apps/__UNI__2050351/www"
 
           if [ ! -d "$WWW_DIR" ]; then
@@ -72,31 +84,20 @@ jobs:
           # Clear old www content
           rm -rf "$WWW_DIR"/*
 
-          # Copy new build output
-          # UniApp app build outputs to dist/build/app/
+          # Copy new build output from dist/build/app/
           if [ -d "dist/build/app" ]; then
             cp -r dist/build/app/* "$WWW_DIR/"
             echo "=== Copied from dist/build/app ==="
-          elif [ -d "dist/build/h5" ]; then
-            # Fallback: if app build produces H5 output
-            cp -r dist/build/h5/* "$WWW_DIR/"
-            echo "=== Copied from dist/build/h5 (fallback) ==="
           else
-            echo "ERROR: No build output found!"
+            echo "ERROR: dist/build/app not found!"
             find dist -type f | head -30
             exit 1
           fi
 
           echo "=== New www contents ==="
           find "$WWW_DIR" -type f | head -30
-          echo "=== Total files ==="
+          echo "=== Total www files ==="
           find "$WWW_DIR" -type f | wc -l
-
-          # Update version in manifest.json if exists
-          if [ -f "$WWW_DIR/manifest.json" ]; then
-            echo "=== manifest.json ==="
-            cat "$WWW_DIR/manifest.json" | head -5
-          fi
 
       - name: Rebuild APK
         run: |
@@ -105,7 +106,7 @@ jobs:
 
       - name: Sign APK with debug key
         run: |
-          # Generate debug keystore if not exists
+          # Generate debug keystore
           if [ ! -f ~/.android/debug.keystore ]; then
             mkdir -p ~/.android
             keytool -genkey -v \
@@ -119,11 +120,12 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-          # Align
+          # Zipalign
           zipalign -f 4 rebuilt.apk aligned.apk
 
-          # Sign with apksigner (v2 signing)
-          apksigner sign \
+          # Sign with apksigner
+          ANDROID_BUILD_TOOLS=$(ls -d ${ANDROID_HOME}/build-tools/*/ | tail -1)
+          "${ANDROID_BUILD_TOOLS}apksigner" sign \
             --ks ~/.android/debug.keystore \
             --ks-pass pass:android \
             --ks-key-alias androiddebugkey \
@@ -132,18 +134,12 @@ jobs:
             aligned.apk
 
           # Verify
-          apksigner verify daojia-app-signed.apk
+          "${ANDROID_BUILD_TOOLS}apksigner" verify daojia-app-signed.apk
           ls -lh daojia-app-signed.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: daojia-app-unsigned
+          name: daojia-app
           path: daojia-app-signed.apk
           retention-days: 30
-
-      - name: Create Release on tag
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: daojia-app-signed.apk
