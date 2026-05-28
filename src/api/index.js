@@ -107,40 +107,41 @@ export function xsgPostForm(path, data, cookie) {
 const COOKIE_KEY = 'daojia_cookie'
 
 export function getCookie() {
-  return uni.getStorageSync(COOKIE_KEY) || ''
-}
-
-/**
- * 获取原始 Cookie（调试用）
- */
-export function getCookieRaw() {
-  return uni.getStorageSync('daojia_cookie_raw') || ''
+  var raw = uni.getStorageSync(COOKIE_KEY) || ''
+  // Clean cookie: remove newlines that break HTTP headers
+  if (raw) {
+    var cleaned = ''
+    for (var i = 0; i < raw.length; i++) {
+      var ch = raw.charAt(i)
+      if (ch !== '
+' && ch !== '' && ch !== '	') {
+        cleaned += ch
+      }
+    }
+    var result = cleaned.replace(/ +/g, ' ').trim()
+    return result
+  }
+  return raw
 }
 
 export function setCookie(cookie) {
-  // Deep clean: remove newlines, carriage returns, tabs from cookie string
-  var c = cookie;
-  c = c.split("\r").join("");
-  c = c.split("\n").join("");
-  c = c.split("\t").join("");
-  c = c.replace(/; +/g, "; ");
-  c = c.replace(/;;+/g, ";");
-  c = c.replace(/  +/g, " ");
-  c = c.trim();
-  uni.setStorageSync(COOKIE_KEY, c)
+  uni.setStorageSync(COOKIE_KEY, cookie)
+}
 
 /**
  * 验证 Cookie 是否有效
+ * @returns {object} { valid, status, message }
  */
 export async function validateCookie(cookie) {
   const ck = cookie || getCookie()
   if (!ck) return { valid: false, status: '未配置', message: '请先配置Cookie' }
   try {
     const res = await apiGet('/order/list.do', { pageNo: 1, pageSize: 1 }, ck)
-    if (res.code === 1) return { valid: true, status: '有效', message: 'Cookie有效' }
-    return { valid: false, status: '异常', message: '验证异常: code=' + (res.code || '?') }
+    if (res.code === 1) return { valid: true, status: '有效', message: '✓ Cookie有效' }
+    if (res.code === -1 || String(res).includes('login')) return { valid: false, status: '已过期', message: 'Cookie已过期，请重新获取' }
+    return { valid: false, status: '异常', message: `验证异常: code=${res.code}` }
   } catch (e) {
-    return { valid: false, status: '网络错误', message: e.message || '请求失败' }
+    return { valid: false, status: '网络错误', message: e.message }
   }
 }
 
