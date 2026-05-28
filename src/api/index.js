@@ -118,20 +118,17 @@ export function getCookieRaw() {
 }
 
 export function setCookie(cookie) {
-  // 深度清洗：去除所有换行、回车、制表符，合并多个空格（用字符串方法避免正则转义问题）
-  let cleaned = cookie
-  // 去除所有换行和回车
-  cleaned = cleaned.replace(//g, '').replace(/
-/g, '').replace(/	/g, '')
-  // 分号后统一一个空格
-  cleaned = cleaned.replace(/; +/g, '; ').replace(/;+/g, ';')
-  // 合并连续空格
-  cleaned = cleaned.replace(/  +/g, ' ')
-  // 首尾去空格
-  cleaned = cleaned.trim()
-  uni.setStorageSync(COOKIE_KEY, cleaned)
+  var cleaned = cookie;
+  cleaned = cleaned.split("").join("");
+  cleaned = cleaned.split("
+").join("");
+  cleaned = cleaned.split("	").join("");
+  cleaned = cleaned.replace(/; +/g, "; ");
+  cleaned = cleaned.replace(/;;+/g, ";");
+  cleaned = cleaned.replace(/  +/g, " ");
+  cleaned = cleaned.trim();
+  uni.setStorageSync(COOKIE_KEY, cleaned);
 }
-
 // ===== 规格相关 =====
 
 /**
