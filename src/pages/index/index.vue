@@ -44,6 +44,10 @@
         <text class="action-icon">⚙️</text>
         <text class="action-label">设置</text>
       </view>
+      <view class="action-item" @tap="navigate('/pages/order/cash-settlement')">
+        <text class="action-icon">💰</text>
+        <text class="action-label">现金结算</text>
+      </view>
     </view>
     
     <!-- 最近订单 -->

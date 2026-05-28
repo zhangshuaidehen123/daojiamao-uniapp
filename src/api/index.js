@@ -142,23 +142,7 @@ export async function validateCookie(cookie) {
  * @returns {Array} 规格列表 [{ specId, specName, price, skuBarCode, ... }]
  */
 export async function getAllSpecs(serviceId, spuCode, cookie) {
-  const ck = cookie || getCookie()
-  const res = await apiPost('/allCity/getProductAllSpecV3.do', {
-    serviceId: String(serviceId),
-    spuCode: String(spuCode)
-  }, ck)
-  
-  if (res.code === 1 && Array.isArray(res.data)) {
-    return res.data
-  }
-  if (Array.isArray(res.data?.list)) {
-    return res.data.list
-  }
-  if (Array.isArray(res.data?.specList)) {
-    return res.data.specList
-  }
-  console.warn('getAllSpecs 返回格式异常:', JSON.stringify(res).substring(0, 200))
-  return []
+  return getAllSpecsRobust(serviceId, spuCode, cookie)
 }
 
 // ===== 订单相关 =====
@@ -643,4 +627,136 @@ export function searchSellers(keyword, sellers) {
   return sellers.filter(s => {
     return s.name?.toLowerCase().includes(kw) || s.group?.toLowerCase().includes(kw) || s.id?.includes(kw)
   })
+}
+
+// ===== 现金结算（来自 engine.py _handle_cash_settlement）=====
+
+/**
+ * 查询订单现金收款信息
+ * @returns {object} { code, data: { cashPayAmount, sellerName, serviceAddress, ... } }
+ */
+export async function getOrderCashInfo(orderId, cookie) {
+  const ck = cookie || getCookie()
+  return await apiGet('/pay/orderInfoConfirm.do', { orderId }, ck)
+}
+
+/**
+ * 执行现金结算
+ * @param {string} orderId 订单号
+ * @param {number} amount 结算金额
+ */
+export async function cashPayOrder(orderId, amount, cookie) {
+  const ck = cookie || getCookie()
+  return await apiGet('/pay/cashPay.do', { orderId, cashPayAmount: amount }, ck)
+}
+
+// ===== 地址模糊匹配（来自 engine.py v11-10）=====
+
+const ADDRESS_MATCH_THRESHOLD = 0.35
+
+/**
+ * 中文数字归一化：四栋 → 4栋，二单元 → 2单元
+ */
+export function normalizeChineseNumbers(text) {
+  if (!text) return ''
+  const cnMap = { '零': '0', '一': '1', '二': '2', '三': '3', '四': '4', '五': '5', '六': '6', '七': '7', '八': '8', '九': '9', '十': '10', '壹': '1', '贰': '2', '叁': '3', '肆': '4', '伍': '5' }
+  return text.replace(/([零一二三四五六七八九十壹贰叁肆伍])(栋|幢|单元|楼|号|室|层|座|梯|期|区)/g, (_, cn, suffix) => (cnMap[cn] || cn) + suffix)
+}
+
+function _extractKeywords(addr) {
+  if (!addr) return []
+  const text = normalizeChineseNumbers(addr.trim())
+  const stopwords = new Set(['的', '公寓', '小区', '大厦', '广场', '花园', '城', '苑', '邸', '楼', '幢', '单元', '号', '室', '层', '栋', '座', '建设中', '分店', '店', '(建设中)', '（建设中）'])
+  const tokens = (text.match(/[\u4e00-\u9fa5]{2,}|\d+/g) || []).filter(t => !stopwords.has(t))
+  return tokens
+}
+
+/**
+ * 计算两个地址相似度 (0.0~1.0)
+ * Jaccard相似度 + 专有名词权重 + 数字匹配加权 + 包含关系加分
+ */
+export function calcAddressSimilarity(addrA, addrB) {
+  if (!addrA || !addrB) return 0
+  const a = addrA.trim(), b = addrB.trim()
+  if (a === b) return 1
+
+  const kwA = _extractKeywords(a), kwB = _extractKeywords(b)
+  if (!kwA.length || !kwB.length) return 0
+
+  const setA = new Set(kwA), setB = new Set(kwB)
+  const common = new Set([...setA].filter(x => setB.has(x)))
+  if (!common.size) {
+    // 关键词无交集 → 门牌号兜底
+    const numsA = kwA.filter(w => /^\d+$/.test(w))
+    const numsB = kwB.filter(w => /^\d+$/.test(w))
+    if (numsA.length && numsB.length && JSON.stringify(numsA.sort()) === JSON.stringify(numsB.sort())) {
+      return ADDRESS_MATCH_THRESHOLD
+    }
+    return 0
+  }
+
+  const jaccard = common.size / new Set([...setA, ...setB]).size
+  const longCommon = kwA.filter(w => w.length >= 3 && setB.has(w)).length
+  const bonus = longCommon * 0.15
+  const numsCommon = kwA.filter(w => /^\d+$/.test(w) && setB.has(w)).length
+  const numBonus = numsCommon * 0.1
+  let score = Math.min(1, jaccard + bonus + numBonus)
+
+  // 包含关系加分
+  const core = kwA.slice(0, 3).join('')
+  if (core && addrB.includes(core)) score = Math.min(1, score + 0.2)
+
+  return Math.round(score * 1000) / 1000
+}
+
+/**
+ * 在候选地址列表中模糊匹配
+ * @param {string} inputAddr 需求地址
+ * @param {Array} candidates 候选列表 [{address, id, ...}] 或纯字符串
+ * @returns {{ match: object|null, score: number }}
+ */
+export function fuzzyMatchAddress(inputAddr, candidates) {
+  if (!inputAddr || !candidates || !candidates.length) return { match: null, score: 0 }
+
+  let best = null, bestScore = 0
+  for (const item of candidates) {
+    const cand = typeof item === 'string' ? item : (item.address || '')
+    const score = calcAddressSimilarity(inputAddr, cand)
+    if (score > bestScore) { bestScore = score; best = item }
+  }
+
+  if (bestScore >= ADDRESS_MATCH_THRESHOLD) {
+    return { match: best, score: bestScore }
+  }
+  return { match: null, score: bestScore }
+}
+
+// 修复 getAllSpecs: engine.py 使用 GET 请求，非 POST
+// 同时支持三次重试（serviceId+spuCode → spuCode+spuCode → serviceId+serviceId）
+const _originalGetAllSpecs = getAllSpecs
+export { _originalGetAllSpecs }
+
+export async function getAllSpecsRobust(serviceId, spuCode, cookie) {
+  const ck = cookie || getCookie()
+
+  const paramSets = [
+    { serviceId, spuCode, cityId: CITY_ID }
+  ]
+  if (serviceId !== spuCode) {
+    paramSets.push({ serviceId: spuCode, spuCode, cityId: CITY_ID })
+    paramSets.push({ serviceId, spuCode: serviceId, cityId: CITY_ID })
+  }
+
+  for (const params of paramSets) {
+    try {
+      const res = await apiGet('/allCity/getProductAllSpecV3.do', params, ck)
+      if ((res.code === 0 || res.code === 1) && res.data) {
+        const specs = res.data.specifications || res.data
+        if (Array.isArray(specs) && specs.length > 0) return specs
+      }
+    } catch (e) {
+      console.warn('getAllSpecsRobust 尝试失败:', e.message)
+    }
+  }
+  return []
 }

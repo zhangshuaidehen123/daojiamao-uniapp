@@ -57,6 +57,14 @@
       }
     },
     {
+      "path": "pages/order/cash-settlement",
+      "style": {
+        "navigationBarTitleText": "现金结算",
+        "navigationBarBackgroundColor": "#1a73e8",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
       "path": "pages/schedule/query",
       "style": {
         "navigationBarTitleText": "排班查询",

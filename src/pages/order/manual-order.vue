@@ -250,7 +250,7 @@ import {
   listFirstServiceTime
 } from '@/api/index.js'
 import {
-  CATEGORY_CONFIG, KEYWORD_CATEGORY_MAP, getCategoryList, selectBestSpec, calcOrderCount
+  CATEGORY_CONFIG, KEYWORD_CATEGORY_MAP, getCategoryList, smartMatchSpec, calcOrderCount
 } from '@/api/category.js'
 
 // ===== 常量 =====
@@ -437,7 +437,7 @@ async function placeCategoryOrder(cookie) {
   const specs = await getAllSpecs(serviceId, spuCode, cookie)
   if (!specs || specs.length === 0) throw new Error(`未找到品类规格: ${cfg.name}`)
   
-  const bestSpec = selectBestSpec(specs, categoryId, '', form.spec_text)
+  const bestSpec = smartMatchSpec(specs, categoryId, form.spec_text, form.detail)
   if (!bestSpec) throw new Error('规格匹配失败')
   
   const count = calcOrderCount(categoryId, bestSpec.specName, '', form.spec_text)
