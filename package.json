@@ -1,0 +1,26 @@
+{
+  "name": "daojiamao-uniapp",
+  "version": "2.5.0",
+  "description": "天鹅到家助手 UniApp 应用",
+  "scripts": {
+    "dev:android": "npx @dcloudio/vue-cli-plugin-uni android",
+    "build:android": "npx @dcloudio/vue-cli-plugin-uni build --platform app-android",
+    "dev:h5": "npx @dcloudio/vue-cli-plugin-uni h5",
+    "build:h5": "npx @dcloudio/vue-cli-plugin-uni build --platform h5"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "^3.0.0",
+    "@dcloudio/uni-ui": "^1.4.0",
+    "vue": "^3.3.0"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "^3.0.0",
+    "@dcloudio/vue-cli-plugin-uni": "latest",
+    "@vue/cli-service": "~5.0.0",
+    "typescript": "^4.0.0"
+  },
+  "browserslist": [
+    "Android >= 4",
+    "ios >= 8"
+  ]
+}
