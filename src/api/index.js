@@ -110,8 +110,23 @@ export function getCookie() {
   return uni.getStorageSync(COOKIE_KEY) || ''
 }
 
+/**
+ * 获取原始 Cookie（调试用）
+ */
+export function getCookieRaw() {
+  return uni.getStorageSync('daojia_cookie_raw') || ''
+}
+
 export function setCookie(cookie) {
-  uni.setStorageSync(COOKIE_KEY, cookie)
+  // 深度清洗：去除所有换行、回车、制表符，合并多个空格
+  const cleaned = cookie
+    .replace(/[
+	]+/g, '')        // 去换行/回车/制表符
+    .replace(/;\s*/g, '; ')          // 分号后统一一个空格(避免分号后连着空格)
+    .replace(/\s{2,}/g, ' ')        // 合并多个空格
+    .replace(/^\s+|\s+$/g, '')     // 首尾去空格
+    .replace(/;;/g, ';')             // 去掉重复分号
+  uni.setStorageSync(COOKIE_KEY, cleaned)
 }
 
 /**
