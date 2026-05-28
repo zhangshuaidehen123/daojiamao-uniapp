@@ -335,6 +335,14 @@ function switchOrderType(type) {
   if (type !== 'category') form.category = ''
   if (type === 'category') form.combo_hint = ''
   form.spec_text = ''
+  // 确保 service_time 始终有效
+  if (!form.service_time) {
+    const d = new Date(Date.now() + 86400000)
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+    form.service_time = `${ds} 14:00`
+    dateValue.value = ds
+    timeValue.value = '14:00'
+  }
 }
 
 function onDateChange(e) {
@@ -358,12 +366,14 @@ function onCategoryChange(e) {
   if (item) form.category = item.value
 }
 
-// 初始化默认日期（明天）
+// 初始化默认日期和时间
 onMounted(() => {
   const tomorrow = new Date(Date.now() + 86400000)
-  dateValue.value = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
-  form.first_service_date = dateValue.value
-  updateServiceTime()
+  const dateStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+  dateValue.value = dateStr
+  timeValue.value = '14:00'
+  form.service_time = `${dateStr} 14:00`
+  form.first_service_date = dateStr
 })
 
 // ===== 下单核心逻辑 =====
