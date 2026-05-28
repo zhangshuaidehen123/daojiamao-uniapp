@@ -3,24 +3,29 @@
   "version": "2.5.0",
   "description": "天鹅到家助手 UniApp 应用",
   "scripts": {
-    "dev:android": "npx @dcloudio/vue-cli-plugin-uni android",
-    "build:android": "npx @dcloudio/vue-cli-plugin-uni build --platform app-android",
-    "dev:h5": "npx @dcloudio/vue-cli-plugin-uni h5",
-    "build:h5": "npx @dcloudio/vue-cli-plugin-uni build --platform h5"
+    "dev:app": "uni -p app",
+    "build:app": "uni build -p app",
+    "dev:h5": "uni",
+    "build:h5": "uni build",
+    "dev:mp-weixin": "uni -p mp-weixin",
+    "build:mp-weixin": "uni build -p mp-weixin"
   },
   "dependencies": {
-    "@dcloudio/uni-app": "^3.0.0",
-    "@dcloudio/uni-ui": "^1.4.0",
-    "vue": "^3.3.0"
+    "@dcloudio/uni-app": "3.0.0-4020920240930001",
+    "@dcloudio/uni-app-plus": "3.0.0-4020920240930001",
+    "@dcloudio/uni-components": "3.0.0-4020920240930001",
+    "@dcloudio/uni-h5": "3.0.0-4020920240930001",
+    "@dcloudio/uni-mp-weixin": "3.0.0-4020920240930001",
+    "@dcloudio/uni-ui": "^1.5.0",
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0"
   },
   "devDependencies": {
-    "@dcloudio/types": "^3.0.0",
-    "@dcloudio/vue-cli-plugin-uni": "latest",
-    "@vue/cli-service": "~5.0.0",
-    "typescript": "^4.0.0"
-  },
-  "browserslist": [
-    "Android >= 4",
-    "ios >= 8"
-  ]
+    "@dcloudio/types": "^3.4.8",
+    "@dcloudio/uni-automator": "3.0.0-4020920240930001",
+    "@dcloudio/uni-cli-shared": "3.0.0-4020920240930001",
+    "@dcloudio/vite-plugin-uni": "3.0.0-4020920240930001",
+    "sass": "^1.71.1",
+    "vite": "5.2.8"
+  }
 }
