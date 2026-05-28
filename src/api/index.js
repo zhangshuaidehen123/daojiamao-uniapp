@@ -122,28 +122,11 @@ export function setCookie(cookie) {
   const cleaned = cookie
     .replace(/[
 	]+/g, '')        // 去换行/回车/制表符
-    .replace(/;\s*/g, '; ')          // 分号后统一一个空格(避免分号后连着空格)
-    .replace(/\s{2,}/g, ' ')        // 合并多个空格
-    .replace(/^\s+|\s+$/g, '')     // 首尾去空格
-    .replace(/;;/g, ';')             // 去掉重复分号
+    .replace(/;\s*/g, '; ')             // 分号后统一一个空格
+    .replace(/\s{2,}/g, ' ')           // 合并多个空格
+    .replace(/^\s+|\s+$/g, '')        // 首尾去空格
+    .replace(/;;/g, ';')                // 去掉重复分号
   uni.setStorageSync(COOKIE_KEY, cleaned)
-}
-
-/**
- * 验证 Cookie 是否有效
- * @returns {object} { valid, status, message }
- */
-export async function validateCookie(cookie) {
-  const ck = cookie || getCookie()
-  if (!ck) return { valid: false, status: '未配置', message: '请先配置Cookie' }
-  try {
-    const res = await apiGet('/order/list.do', { pageNo: 1, pageSize: 1 }, ck)
-    if (res.code === 1) return { valid: true, status: '有效', message: '✓ Cookie有效' }
-    if (res.code === -1 || String(res).includes('login')) return { valid: false, status: '已过期', message: 'Cookie已过期，请重新获取' }
-    return { valid: false, status: '异常', message: `验证异常: code=${res.code}` }
-  } catch (e) {
-    return { valid: false, status: '网络错误', message: e.message }
-  }
 }
 
 // ===== 规格相关 =====
