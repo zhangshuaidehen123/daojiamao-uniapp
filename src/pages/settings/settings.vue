@@ -124,8 +124,15 @@ async function handleTestCookie() {
 function handleSaveCookie() {
   const ck = cookieText.value.trim()
   if (!ck) return
+  // 同时保存原始文本
+  uni.setStorageSync('daojia_cookie_raw', ck)
   setCookie(ck)
-  uni.showToast({ title: '保存成功', icon: 'success' })
+  const cleaned = getCookie()
+  uni.showToast({ 
+    title: '保存成功' + (cleaned.length < ck.length ? '（已清洗换行符）' : ''), 
+    icon: 'success',
+    duration: 2000
+  })
   testCurrentCookie()
 }
 
