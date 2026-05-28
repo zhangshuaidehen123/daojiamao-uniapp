@@ -108,20 +108,15 @@ const COOKIE_KEY = 'daojia_cookie'
 
 export function getCookie() {
   var raw = uni.getStorageSync(COOKIE_KEY) || ''
-  // Clean cookie: remove newlines that break HTTP headers
-  if (raw) {
-    var cleaned = ''
-    for (var i = 0; i < raw.length; i++) {
-      var ch = raw.charAt(i)
-      if (ch !== '
-' && ch !== '' && ch !== '	') {
-        cleaned += ch
-      }
+  if (!raw) return raw
+  var cleaned = ''
+  for (var i = 0; i < raw.length; i++) {
+    var code = raw.charCodeAt(i)
+    if (code !== 10 && code !== 13 && code !== 9) {
+      cleaned += raw.charAt(i)
     }
-    var result = cleaned.replace(/ +/g, ' ').trim()
-    return result
   }
-  return raw
+  return cleaned.replace(/ +/g, ' ').trim()
 }
 
 export function setCookie(cookie) {
